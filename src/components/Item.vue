@@ -3,8 +3,8 @@
     <span class="score">{{ item.score }}</span>
     <span class="title">
       <template v-if="item.url">
-        <a :href="item.url" target="_blank">{{ item.title }}</a>
-        <span class="host">({{ item.url | host }})</span>
+        <a :href="item.url" target="_blank" rel="noopener">{{ item.title }}</a>
+        <span class="host"> ({{ item.url | host }})</span>
       </template>
       <template v-else>
         <router-link :to="'/item/' + item.id">{{ item.title }}</router-link>
@@ -27,20 +27,14 @@
 </template>
 
 <script>
-import { timeAgo } from '../filters'
+import { timeAgo } from '../util/filters'
 
 export default {
   name: 'news-item',
   props: ['item'],
-  // https://github.com/vuejs/vue/blob/next/packages/vue-server-renderer/README.md#component-caching
-  serverCacheKey: props => {
-    return `${
-      props.item.id
-    }::${
-      props.item.__lastUpdated
-    }::${
-      timeAgo(props.item.time)
-    }`
+  // http://ssr.vuejs.org/en/caching.html#component-level-caching
+  serverCacheKey: ({ item: { id, __lastUpdated, time }}) => {
+    return `${id}::${__lastUpdated}::${timeAgo(time)}`
   }
 }
 </script>
@@ -64,9 +58,9 @@ export default {
     margin-top -10px
   .meta, .host
     font-size .85em
-    color #999
+    color #828282
     a
-      color #999
+      color #828282
       text-decoration underline
       &:hover
         color #ff6600

@@ -1,6 +1,5 @@
 <template>
   <div class="news-view">
-    <spinner :show="loading"></spinner>
     <div class="news-list-nav">
       <router-link v-if="page > 1" :to="'/' + type + '/' + (page - 1)">&lt; prev</router-link>
       <a v-else class="disabled">&lt; prev</a>
@@ -20,15 +19,13 @@
 </template>
 
 <script>
-import Spinner from './Spinner.vue'
-import Item from './Item.vue'
-import { watchList } from '../store/api'
+import { watchList } from '../api'
+import Item from '../components/Item.vue'
 
 export default {
   name: 'item-list',
 
   components: {
-    Spinner,
     Item
   },
 
@@ -37,16 +34,10 @@ export default {
   },
 
   data () {
-    const isInitialRender = !this.$root._isMounted
     return {
-      loading: false,
-      transition: 'slide-left',
-      // if this is the initial render, directly render with the store state
-      // otherwise this is a page switch, start with blank and wait for data load.
-      // we need these local state so that we can precisely control the timing
-      // of the transitions.
-      displayedPage: isInitialRender ? Number(this.$store.state.route.params.page) || 1 : -1,
-      displayedItems: isInitialRender ? this.$store.getters.activeItems : []
+      transition: 'slide-right',
+      displayedPage: Number(this.$store.state.route.params.page) || 1,
+      displayedItems: this.$store.getters.activeItems
     }
   },
 
@@ -88,7 +79,7 @@ export default {
 
   methods: {
     loadItems (to = this.page, from = -1) {
-      this.loading = true
+      this.$bar.start()
       this.$store.dispatch('FETCH_LIST_DATA', {
         type: this.type
       }).then(() => {
@@ -96,10 +87,12 @@ export default {
           this.$router.replace(`/${this.type}/1`)
           return
         }
-        this.transition = to > from ? 'slide-left' : 'slide-right'
+        this.transition = from === -1
+          ? null
+          : to > from ? 'slide-left' : 'slide-right'
         this.displayedPage = to
         this.displayedItems = this.$store.getters.activeItems
-        this.loading = false
+        this.$bar.finish()
       })
     }
   }
@@ -138,11 +131,11 @@ export default {
     padding 0
     margin 0
 
-.slide-left-enter, .slide-right-leave-active
+.slide-left-enter, .slide-right-leave-to
   opacity 0
   transform translate(30px, 0)
 
-.slide-left-leave-active, .slide-right-enter
+.slide-left-leave-to, .slide-right-enter
   opacity 0
   transform translate(-30px, 0)
 

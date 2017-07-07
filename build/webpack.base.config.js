@@ -1,13 +1,24 @@
 const path = require('path')
+const webpack = require('webpack')
 const vueConfig = require('./vue-loader.config')
+const ExtractTextPlugin = require('extract-text-webpack-plugin')
+const FriendlyErrorsPlugin = require('friendly-errors-webpack-plugin')
+
+const isProd = process.env.NODE_ENV === 'production'
 
 module.exports = {
-  devtool: '#source-map',
-  entry: './src/client-entry.js',
+  devtool: isProd
+    ? false
+    : '#cheap-module-source-map',
   output: {
     path: path.resolve(__dirname, '../dist'),
     publicPath: '/dist/',
-    filename: 'client-bundle.js'
+    filename: '[name].[chunkhash].js'
+  },
+  resolve: {
+    alias: {
+      'public': path.resolve(__dirname, '../public')
+    }
   },
   module: {
     noParse: /es6-promise\.js$/, // avoid webpack shimming process
@@ -19,11 +30,8 @@ module.exports = {
       },
       {
         test: /\.js$/,
-        loader: 'buble-loader',
-        exclude: /node_modules/,
-        options: {
-          objectAssign: 'Object.assign'
-        }
+        loader: 'babel-loader',
+        exclude: /node_modules/
       },
       {
         test: /\.(png|jpg|gif|svg)$/,
@@ -32,7 +40,32 @@ module.exports = {
           limit: 10000,
           name: '[name].[ext]?[hash]'
         }
+      },
+      {
+        test: /\.css$/,
+        use: isProd
+          ? ExtractTextPlugin.extract({
+              use: 'css-loader?minimize',
+              fallback: 'vue-style-loader'
+            })
+          : ['vue-style-loader', 'css-loader']
       }
     ]
-  }
+  },
+  performance: {
+    maxEntrypointSize: 300000,
+    hints: isProd ? 'warning' : false
+  },
+  plugins: isProd
+    ? [
+        new webpack.optimize.UglifyJsPlugin({
+          compress: { warnings: false }
+        }),
+        new ExtractTextPlugin({
+          filename: 'common.[chunkhash].css'
+        })
+      ]
+    : [
+        new FriendlyErrorsPlugin()
+      ]
 }
